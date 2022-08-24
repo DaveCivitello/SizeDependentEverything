@@ -18,14 +18,14 @@ Simulations to examine the effects of simultaneous size-dependent transmission a
 * Resource production model that allows for logistically growing algae and non-reproductive detritus inputs
 
 ### Newly added features
-* Size-selective predation (3/1/2022)
-  + Implemented in two mutually exclusive ways: (1) vulnerable window, or (2) empirical negative-exponential continuous effect
+* Size-selective predation (8/22/2022)
+  + Implemented as an exponential continous effect, when negative coefficient, based on snail length, when positive, based on difference between maximum length and current shell size
 * Infection-selective predation (3/30/22)
   + Implemented check for patently shedding snails and patently shedding snails are attacked at relative rate "pred_alpha_Inf"
 * cumulative_totals() function that retains cumulative totals and parameter values
 * Implemented a "simulation space" function to run factorial simulation experiments over (4/1/2022)
   + DEBIBM_factorial_simulator() function makes
-* Implemented prawn grow-out model from Hoover et al. 2019, Nature Sustainability (4/13/2022)
+
 
 ### Bug fixes/issues resolved
 * High predation scenarios revealed a bookkeeping problem when only 1 snail is alive (transposing snail.stat matrix)
@@ -243,7 +243,13 @@ run_DEB_IBM = function(N.snail=60, min.L=2, max.L=16, Food=1, drip=T, pars){
       snail.stats[which(Infection.step[1:N.snails] > 0),"P"] = snail.stats[which(Infection.step[1:N.snails] > 0),"P"] + 2.85e-5 
       
       # Determine snail mortality rates due to size- and infection-selective predation
-      pred_as = pars["pred_a0"]*exp(pars["pred_aL"]*(snail.stats[,"L"]))*(1 + (snail.stats[,"Cercs"]>0)*pars["pred_alpha_Inf"])
+      # pred_as = pars["pred_a0"]*exp(pars["pred_aL"]*(snail.stats[,"L"]))*(1 + (snail.stats[,"Cercs"]>0)*pars["pred_alpha_Inf"])
+      
+            # Determine snail mortality rates due to size- and infection-selective predation
+      pred_as = ifelse(pars["pred_a0"] < 0,
+        pars["pred_a0"]*exp(pars["pred_aL"]*(snail.stats[,"LG"]))*(1 + (snail.stats[,"Cercs"]>0)*pars["pred_alpha_Inf"]),
+        pars["pred_a0"]*exp(-pars["pred_aL"]*(pars["LM"] -  snail.stats[,"LG"]))*(1 +   
+        (snail.stats[,"Cercs"]>0)*pars["pred_alpha_Inf"]))
       
       hb = as.numeric(pars["hb"]) + (pred_as*pars["pred_N"]) / (1 + mean(pred_as) * pars["pred_ht"] * N.snails)
 
@@ -420,7 +426,7 @@ DEBIBM_factorial_simulator = function(OoI, PoI, mins, maxs, levels, iterations, 
   
 }
 
-facsim_result = DEBIBM_factorial_simulator(OoI=Outputs_of_Interest, PoI=Parameters_of_Interest, mins = c(0, -0.1), maxs = c(100, 0.1), levels = 7, iterations=2)
+facsim_result = DEBIBM_factorial_simulator(OoI=Outputs_of_Interest, PoI=Parameters_of_Interest, mins = c(0, -0.1), maxs = c(500, 0.1), levels = 11, iterations=4)
 
 facsim_Summary = aggregate(Cercariae ~ pred_N*pred_aL, FUN=mean, data=facsim_result)
  
